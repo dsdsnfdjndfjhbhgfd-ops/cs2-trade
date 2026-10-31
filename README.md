@@ -43,6 +43,21 @@ Steam отдаёт историю цен за годы, но только авт
 2. В репозитории: Settings → Secrets and variables → Actions → New repository secret, имя `STEAM_LOGIN_SECURE`.
 3. Actions → «Update prices and deploy» → Run workflow → отметить «Загрузить прошлую историю из Steam».
 
+## Вход через Steam
+
+Кнопка «Войти через Steam» в шапке. Сайт статический, поэтому вход проверяет edge-функция
+Supabase `steam-auth` (проект `cs2-trade`, исходник — `supabase/functions/steam-auth/index.ts`):
+
+1. Сайт отправляет браузер на функцию, она — на страницу входа Steam (OpenID). Пароль вводится только на steamcommunity.com.
+2. Steam возвращает браузер на функцию; та проверяет подпись ответа у самого Steam, создаёт или находит
+   пользователя Supabase и возвращает браузер на сайт с сессией. Сессия хранится в браузере и продлевается сама.
+3. Имя и аватар берутся из открытого профиля Steam. Если задать функции секрет `STEAM_API_KEY`
+   (ключ с https://steamcommunity.com/dev/apikey), они будут браться через Steam Web API.
+
+После входа на сайт можно вернуться только на адреса из списка: сайт на GitHub Pages и `localhost`.
+Другие адреса добавляются секретом функции `ALLOWED_REDIRECTS` (префиксы через запятую).
+Функцию нужно деплоить с выключенной проверкой JWT (`supabase functions deploy steam-auth --no-verify-jwt`).
+
 ## Настройки
 
 Переменные окружения сборщика: `MAX_ITEMS` (сколько скинов отслеживать, по умолчанию 300) и
