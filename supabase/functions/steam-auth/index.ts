@@ -102,17 +102,27 @@ async function signIn(steamId: string) {
   const email = `steam_${steamId}@users.cs2-trade.invalid`;
   const meta = { steam_id: steamId, ...profile };
 
-  const created = await admin.auth.admin.createUser({
-    email,
-    email_confirm: true,
-    app_metadata: { steam_id: steamId },
-    user_metadata: meta,
-  });
+  const create = () =>
+    admin.auth.admin.createUser({ email, email_confirm: true, app_metadata: { steam_id: steamId }, user_metadata: meta });
+  const created = await create();
   if (created.error && !/already|exists|registered/i.test(created.error.message)) throw created.error;
 
-  const link = await admin.auth.admin.generateLink({ type: "magiclink", email });
+  let link = await admin.auth.admin.generateLink({ type: "magiclink", email });
   if (link.error) throw link.error;
-  if (!created.data.user) await admin.auth.admin.updateUserById(link.data.user.id, { user_metadata: meta });
+  // Аккаунт со служебным адресом мог зарегистрировать кто-то другой через почту и пароль,
+  // чтобы потом войти в чужой Steam-аккаунт. Настоящий Steam-аккаунт отмечен steam_id
+  // в app_metadata (его пользователь изменить не может); чужой удаляем и создаём заново.
+  if (link.data.user.app_metadata?.steam_id !== steamId) {
+    console.warn("steam-auth: replacing squatted account", link.data.user.id);
+    const del = await admin.auth.admin.deleteUser(link.data.user.id);
+    if (del.error) throw del.error;
+    const again = await create();
+    if (again.error) throw again.error;
+    link = await admin.auth.admin.generateLink({ type: "magiclink", email });
+    if (link.error) throw link.error;
+  } else if (!created.data.user) {
+    await admin.auth.admin.updateUserById(link.data.user.id, { user_metadata: meta });
+  }
 
   const otp = await admin.auth.verifyOtp({ type: "magiclink", token_hash: link.data.properties.hashed_token });
   if (otp.error || !otp.data.session) throw otp.error ?? new Error("no session");

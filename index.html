@@ -78,6 +78,33 @@
     </section>
   </main>
 
+  <dialog id="authDialog" class="auth-dialog" aria-labelledby="authTitle">
+    <div class="auth-card">
+      <button type="button" class="auth-close" id="authClose" aria-label="Закрыть">×</button>
+      <h2 id="authTitle">Вход в CS2 Trade</h2>
+      <button type="button" class="steam-btn" id="steamLogin">Войти через Steam</button>
+      <div class="auth-or"><span>или по почте</span></div>
+      <div class="seg auth-tabs">
+        <button type="button" data-mode="login" class="on">Вход</button>
+        <button type="button" data-mode="signup">Регистрация</button>
+      </div>
+      <form id="authForm" novalidate>
+        <label>Почта
+          <input id="authEmail" type="email" autocomplete="email" required maxlength="254">
+        </label>
+        <label>Пароль
+          <input id="authPassword" type="password" autocomplete="current-password" required maxlength="72">
+        </label>
+        <label id="authPassword2Row" hidden>Пароль ещё раз
+          <input id="authPassword2" type="password" autocomplete="new-password" maxlength="72">
+        </label>
+        <p class="auth-hint muted" id="authHint" hidden>Не короче 8 символов. После регистрации придёт письмо со ссылкой для подтверждения почты.</p>
+        <p class="auth-msg" id="authMsg" role="alert" hidden></p>
+        <button type="submit" class="auth-submit" id="authSubmit">Войти</button>
+      </form>
+    </div>
+  </dialog>
+
   <script src="assets/vendor/lightweight-charts.js"></script>
   <script src="assets/vendor/supabase.js"></script>
   <script src="assets/auth.js"></script>

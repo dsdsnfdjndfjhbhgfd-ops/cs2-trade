@@ -27,18 +27,60 @@ button, input, select { font: inherit; color: inherit; }
 .top-right { display: flex; align-items: center; gap: 14px; min-width: 0; }
 
 .auth { display: flex; align-items: center; gap: 10px; flex: none; font-size: 13px; }
-.steam-btn {
-  background: #1b2838; border: 1px solid #2a475e; border-radius: 6px; padding: 6px 12px;
-  color: #c7d5e0; cursor: pointer; white-space: nowrap;
+.login-btn {
+  background: var(--accent); border: 0; border-radius: 6px; padding: 6px 16px;
+  color: #111; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
-.steam-btn:hover { background: #2a475e; color: #fff; }
+.login-btn:hover { filter: brightness(1.08); }
+.ava {
+  width: 26px; height: 26px; border-radius: 4px; flex: none; display: grid; place-items: center;
+  background: var(--panel-2); border: 1px solid var(--line); font-style: normal; font-weight: 600; font-size: 12px;
+}
 .profile { display: flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; max-width: 180px; }
 .profile img { border-radius: 4px; flex: none; }
 .profile span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .profile:hover span { color: var(--accent); }
 .logout { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; color: var(--muted); cursor: pointer; }
 .logout:hover { color: var(--text); border-color: var(--muted); }
-.auth-err { color: var(--down); font-size: 12px; max-width: 200px; }
+
+/* Окно входа */
+.auth-dialog {
+  border: 0; padding: 0; background: none; color: var(--text); width: min(380px, calc(100vw - 32px)); max-width: none;
+}
+.auth-dialog::backdrop { background: rgba(0, 0, 0, .6); }
+.auth-card {
+  position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px; display: flex; flex-direction: column; gap: 12px;
+}
+.auth-card h2 { margin: 0 0 4px; font-size: 18px; }
+.auth-close {
+  position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: none; border: 0;
+  color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; border-radius: 6px;
+}
+.auth-close:hover { color: var(--text); background: var(--panel-2); }
+.steam-btn {
+  background: #1b2838; border: 1px solid #2a475e; border-radius: 6px; padding: 9px 12px;
+  color: #c7d5e0; cursor: pointer; font-weight: 600;
+}
+.steam-btn:hover { background: #2a475e; color: #fff; }
+.auth-or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
+.auth-or::before, .auth-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.auth-tabs { display: flex; }
+.auth-tabs button { flex: 1; }
+#authForm { display: flex; flex-direction: column; gap: 10px; }
+#authForm label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+#authForm input {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; outline: none; font-size: 14px;
+}
+#authForm input:focus { border-color: var(--accent); }
+.auth-hint { margin: 0; font-size: 12px; line-height: 1.4; }
+.auth-msg { margin: 0; font-size: 13px; line-height: 1.4; padding: 8px 10px; border-radius: 6px; }
+.auth-msg.err { color: #ffb4b2; background: rgba(239, 83, 80, .12); }
+.auth-msg.ok { color: #9fe3d9; background: rgba(38, 166, 154, .14); }
+.auth-submit {
+  background: var(--accent); border: 0; border-radius: 6px; padding: 9px 12px; color: #111; font-weight: 600; cursor: pointer;
+}
+.auth-submit:disabled { opacity: .6; cursor: progress; }
 
 .layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); height: calc(100vh - 52px); }
 
