@@ -2,7 +2,7 @@ name: Update prices and deploy
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/15 * * * *'
   push:
     branches: [main]
   workflow_dispatch:
@@ -51,7 +51,12 @@ jobs:
           STEAM_LOGIN_SECURE: ${{ secrets.STEAM_LOGIN_SECURE }}
         run: node scripts/backfill-steam.mjs
 
+      # По расписанию — три опроса площадок с паузой 5 минут (около 11 минут), чтобы у 15-минутных
+      # свечей были настоящие максимум и минимум. При пуше и ручном запуске — один опрос, чтобы сайт обновился быстрее.
       - name: Collect prices
+        env:
+          POLLS: ${{ github.event_name == 'schedule' && '3' || '1' }}
+          POLL_INTERVAL_S: '300'
         run: node scripts/collect.mjs
 
       - name: Save data branch

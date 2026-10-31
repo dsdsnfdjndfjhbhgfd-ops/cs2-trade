@@ -144,7 +144,21 @@ button, input, select { font: inherit; color: inherit; }
 .seg button.on { background: var(--panel-2); color: var(--accent); }
 .seg svg { width: 15px; height: 15px; display: block; }
 
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; color: var(--text);
+  outline: none; cursor: pointer;
+}
+.sel:focus-visible { border-color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cmp-sel {
+  display: inline-flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 999px; padding: 0 4px 0 11px; font-size: 12px; color: var(--muted);
+}
+.cmp-sel i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--c); }
+.cmp-sel.on { color: var(--text); border-color: #3a4552; background: var(--panel-2); }
+.cmp-sel.on i { background: var(--c); }
+.cmp-sel select { background: none; border: 0; color: inherit; font-size: 12px; padding: 4px 2px; outline: none; cursor: pointer; }
+.cmp-sel select option, .sel option { background: var(--panel); color: var(--text); }
 .chips button {
   display: inline-flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line);
   border-radius: 999px; padding: 4px 11px; font-size: 12px; color: var(--muted); cursor: pointer;
@@ -192,6 +206,24 @@ button, input, select { font: inherit; color: inherit; }
   background: rgba(21, 26, 33, .92); border: 1px solid var(--line); border-radius: 6px; color: var(--muted);
 }
 
+.best-line { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.best-line b { color: var(--up); }
+
+.markets h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 4px 0 6px; }
+.markets table {
+  width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  overflow: hidden; font-size: 13px; font-variant-numeric: tabular-nums;
+}
+.markets th { text-align: left; font-weight: 500; font-size: 12px; color: var(--muted); padding: 7px 12px; border-bottom: 1px solid var(--line); }
+.markets td { padding: 7px 12px; border-bottom: 1px solid #1a2028; }
+.markets tr:last-child td { border-bottom: 0; }
+.markets :is(th, td):not(:first-child) { text-align: right; }
+.markets tr.best td { background: rgba(38, 166, 154, .07); }
+.markets tr.old td { opacity: .6; }
+.markets .tag { font-size: 11px; color: var(--up); border: 1px solid rgba(38, 166, 154, .4); border-radius: 4px; padding: 0 5px; margin-left: 4px; }
+.markets a { color: var(--text); text-decoration: none; white-space: nowrap; }
+.markets a:hover { color: var(--accent); }
+
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-variant-numeric: tabular-nums; }
 .stat h3 { margin: 0 0 6px; font-size: 12px; color: var(--muted); font-weight: 500; }
@@ -214,5 +246,7 @@ button, input, select { font: inherit; color: inherit; }
   .chart-wrap { flex: none; height: 420px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .item-head h1 { font-size: 17px; }
+  .markets td, .markets th { padding: 6px 8px; }
+  .markets .tag { display: none; }
   .price { font-size: 22px; }
 }

@@ -128,15 +128,17 @@
     up: '#26a69a', down: '#ef5350', qty: '#f0b90b', ma7: '#ba68c8', ma25: '#ff9800', cmp: '#66c0f4',
     upVol: 'rgba(38,166,154,.45)', downVol: 'rgba(239,83,80,.45)',
   };
-  const SRC_NAME = { sp: 'Skinport', st: 'Steam' };
-  const other = (src) => (src === 'sp' ? 'st' : 'sp');
+  const SRC_NAME = { ag: 'Рынок', sp: 'Skinport', mc: 'market.csgo.com', wp: 'Waxpeer', ls: 'Lis-Skins', st: 'Steam' };
+  const SOURCES = Object.keys(SRC_NAME);
 
   // Настройки графика запоминаются в браузере.
-  const cs = { source: 'sp', tf: '4h', range: 'all', type: 'candle', vol: true, qty: false, ma7: false, ma25: false, cmp: false };
+  const cs = { source: 'ag', tf: '4h', range: 'all', type: 'candle', vol: true, qty: false, ma7: false, ma25: false, cmp: '' };
   const CS_KEY = 'cs2trade.chart';
   try {
     const saved = JSON.parse(localStorage.getItem(CS_KEY) || 'null');
     if (saved && typeof saved === 'object') for (const k of Object.keys(cs)) if (typeof saved[k] === typeof cs[k]) cs[k] = saved[k];
+    if (!SRC_NAME[cs.source]) cs.source = 'ag';
+    if (cs.cmp && !SRC_NAME[cs.cmp]) cs.cmp = '';
   } catch { /* хранилище недоступно — настройки по умолчанию */ }
   const saveCs = () => { try { localStorage.setItem(CS_KEY, JSON.stringify(cs)); } catch { /* не страшно */ } };
 
@@ -213,6 +215,8 @@
 
   function seriesFor(item, source, tf) {
     const s = item?.[source] || {};
+    if (tf === '15m') return s.m || [];
+    if (tf === '30m') return aggregate(s.m || [], 30 * 60, false);
     if (tf === '1h') return s.h || [];
     if (tf === '4h') return aggregate(s.h || [], 4 * HOUR, false);
     if (tf === '1d') return s.d || [];
@@ -257,7 +261,7 @@
     volume.setData(cs.vol ? data.filter((c) => c[5] != null).map((c) => ({
       time: c[0], value: c[5], color: c[4] >= c[1] ? COLORS.upVol : COLORS.downVol,
     })) : []);
-    const showQty = cs.qty && cs.source === 'sp';
+    const showQty = cs.qty && cs.source !== 'st';
     qty.setData(showQty ? data.filter((c) => c[6] != null).map((c) => ({ time: c[0], value: c[6] })) : []);
     chart.priceScale('right').applyOptions({ scaleMargins: { top: 0.08, bottom: cs.vol ? 0.25 : 0.06 } });
 
@@ -268,9 +272,10 @@
     view.ma7 = toMap(m7);
     view.ma25 = toMap(m25);
 
-    const cmpData = cs.cmp ? seriesFor(item, other(cs.source), cs.tf).map((c) => ({ time: c[0], value: c[4] })) : [];
+    const cmpOn = cs.cmp && cs.cmp !== cs.source;
+    const cmpData = cmpOn ? seriesFor(item, cs.cmp, cs.tf).map((c) => ({ time: c[0], value: c[4] })) : [];
     cmp.setData(cmpData);
-    cmp.applyOptions({ title: cs.cmp ? SRC_NAME[other(cs.source)] : '' });
+    cmp.applyOptions({ title: cmpOn ? SRC_NAME[cs.cmp] : '' });
     view.cmpByTime = toMap(cmpData);
 
     chart.applyOptions({ watermark: { text: splitName(item.n)[0] } });
@@ -280,9 +285,11 @@
     const srcName = SRC_NAME[cs.source];
     if (data.length < 3) {
       empty.hidden = false;
+      const src = cs.source === 'ag' ? 'рыночной цене' : srcName;
       empty.textContent = data.length === 0
-        ? `По ${srcName} для этого скина данных пока нет.` + (cs.source === 'st' ? ' В Steam опрашиваются только самые ходовые позиции.' : '')
-        : `История по ${srcName} только начала собираться: новая свеча появляется с каждым обновлением. Переключите свечу на 1ч, чтобы видеть больше свечей в первые дни.`;
+        ? `По ${src} для этого скина данных пока нет.` +
+          (cs.source === 'st' ? ' В Steam опрашиваются только самые ходовые позиции.' : cs.source !== 'ag' ? ' Возможно, скин сейчас не продаётся на этой площадке.' : '')
+        : `История по ${src} только начала собираться: данные обновляются каждые 15 минут. Выберите свечу 15м или 30м, чтобы видеть больше свечей в первые дни.`;
     } else {
       empty.hidden = true;
     }
@@ -293,7 +300,7 @@
   // ---------- Период ----------
   const RANGE_SPAN = { '1d': DAY, '1w': 7 * DAY, '1m': 30 * DAY, '3m': 91 * DAY };
   // Свеча, которая подходит к периоду: около 20–200 свечей на экране.
-  const RANGE_TF = { '1d': '1h', '1w': '1h', '1m': '4h', '3m': '1d' };
+  const RANGE_TF = { '1d': '15m', '1w': '1h', '1m': '4h', '3m': '1d' };
 
   function applyRange() {
     rangeSetAt = Date.now();
@@ -351,7 +358,7 @@
     if (!c) { $('legend').innerHTML = ''; return; }
     const ch = pct(c[4], c[1]);
     const val = (label, v, color) => (v == null ? '' : ` <span class="lg"><i style="background:${color}"></i>${label} <b>${fmtMoney(v)}</b></span>`);
-    const otherPrice = view.cmpByTime.get(c[0]);
+    const otherPrice = cs.cmp && cs.cmp !== cs.source ? view.cmpByTime.get(c[0]) : null;
     const volLabel = cs.tf === '1w' ? 'Продаж за неделю' : 'Продаж за 24ч';
     $('legend').innerHTML =
       `<div><span class="muted">${fmtTime(c[0], true)}</span> ` +
@@ -359,10 +366,10 @@
         ? `О <b>${fmtMoney(c[1])}</b> М <b>${fmtMoney(c[2])}</b> Н <b>${fmtMoney(c[3])}</b> З <b class="${cls(ch)}">${fmtMoney(c[4])}</b>`
         : `Цена <b class="${cls(ch)}">${fmtMoney(c[4])}</b>`) +
       ` <b class="${cls(ch)}">${fmtPct(ch)}</b></div>` +
-      `<div>${volLabel} <b>${fmtInt(c[5])}</b>` + (c[6] != null && cs.source === 'sp' ? ` · Лотов <b>${fmtInt(c[6])}</b>` : '') +
+      (c[5] != null ? `<div>${volLabel} <b>${fmtInt(c[5])}</b> · ` : '<div>') + (c[6] != null ? `Лотов <b>${fmtInt(c[6])}</b>` : '') +
       val('MA 7', view.ma7.get(c[0]), COLORS.ma7) + val('MA 25', view.ma25.get(c[0]), COLORS.ma25) +
       (otherPrice != null
-        ? val(SRC_NAME[other(cs.source)], otherPrice, COLORS.cmp) + ` <span class="muted">(${fmtPct(pct(otherPrice, c[4]))})</span>`
+        ? val(SRC_NAME[cs.cmp], otherPrice, COLORS.cmp) + ` <span class="muted">(${fmtPct(pct(otherPrice, c[4]))})</span>`
         : '') +
       `</div>`;
   }
@@ -370,18 +377,24 @@
 
   // ---------- Управление ----------
   function syncControls() {
-    for (const [id, key] of [['source', 'source'], ['tf', 'tf'], ['range', 'range'], ['ctype', 'type']]) {
+    for (const [id, key] of [['tf', 'tf'], ['range', 'range'], ['ctype', 'type']]) {
       for (const b of $(id).children) b.classList.toggle('on', b.dataset.v === cs[key]);
     }
-    for (const b of $('layers').children) {
+    $('source').value = cs.source;
+    for (const b of $('layers').querySelectorAll('button[data-k]')) {
       const k = b.dataset.k;
       b.classList.toggle('on', !!cs[k]);
       b.setAttribute('aria-pressed', String(!!cs[k]));
-      if (k === 'qty') b.disabled = cs.source !== 'sp';
+      if (k === 'qty') b.disabled = cs.source === 'st';
     }
-    $('cmpLabel').textContent = SRC_NAME[other(cs.source)];
+    const sel = $('cmp');
+    sel.innerHTML = '<option value="">Сравнить…</option>' +
+      SOURCES.filter((k) => k !== cs.source).map((k) => `<option value="${k}">${SRC_NAME[k]}</option>`).join('');
+    sel.value = cs.cmp && cs.cmp !== cs.source ? cs.cmp : '';
+    sel.parentElement.classList.toggle('on', !!sel.value);
     const qb = $('layers').querySelector('[data-k=qty]');
-    qb.title = cs.source === 'sp' ? 'Сколько лотов выставлено на продажу' : 'Число лотов есть только по Skinport';
+    qb.title = cs.source === 'st' ? 'Steam не сообщает число лотов' :
+      cs.source === 'ag' ? 'Сколько лотов выставлено на всех площадках вместе' : 'Сколько лотов выставлено на продажу';
   }
 
   function onSeg(id, fn) {
@@ -393,7 +406,8 @@
       saveCs();
     });
   }
-  onSeg('source', (v) => { cs.source = v; drawChart(); });
+  $('source').addEventListener('change', (e) => { cs.source = e.target.value; drawChart(); syncControls(); saveCs(); });
+  $('cmp').addEventListener('change', (e) => { cs.cmp = e.target.value; drawChart(true); syncControls(); saveCs(); });
   onSeg('tf', (v) => { cs.tf = v; drawChart(); });
   onSeg('ctype', (v) => { cs.type = v; drawChart(true); });
   onSeg('range', (v) => {
@@ -440,7 +454,7 @@
     g.fillRect(0, 0, cv.width, cv.height);
     g.drawImage(shot, 0, pad);
     const scale = shot.width / $('chart').clientWidth;
-    const tfName = { '1h': '1 час', '4h': '4 часа', '1d': '1 день', '1w': '1 неделя' }[cs.tf];
+    const tfName = { '15m': '15 минут', '30m': '30 минут', '1h': '1 час', '4h': '4 часа', '1d': '1 день', '1w': '1 неделя' }[cs.tf];
     g.font = `600 ${15 * scale}px Inter, system-ui, sans-serif`;
     g.fillStyle = '#e6e8ea';
     g.fillText(state.item.n, 12 * scale, 20 * scale);
@@ -460,6 +474,42 @@
   syncControls();
 
   // ---------- Карточка скина ----------
+  const MARKET_LINK = {
+    sp: (n, now) => now?.url || null,
+    mc: (n) => `https://market.csgo.com/en/?search=${encodeURIComponent(n)}`,
+    wp: (n) => `https://waxpeer.com/?game=csgo&search=${encodeURIComponent(n)}`,
+    ls: (n, now) => now?.url || null,
+    st: (n) => 'https://steamcommunity.com/market/listings/730/' + encodeURIComponent(n),
+  };
+  const safeUrl = (u) => (/^https:\/\//.test(u || '') ? u : null);
+
+  // Таблица «Цены на площадках»: самое дешёвое предложение на каждой и разница с рыночной ценой.
+  function renderMarkets(meta, item) {
+    const now = item.now || {};
+    const fresh = Math.floor(Date.now() / 1000) - 2 * HOUR;
+    const rows = ['sp', 'mc', 'wp', 'ls', 'st'].map((k) => ({ k, x: now[k] })).filter((r) => r.x?.p);
+    if (!rows.length) { $('markets').innerHTML = ''; return; }
+    rows.sort((a, b) => (a.k === 'st') - (b.k === 'st') || a.x.p - b.x.p);
+    const bestK = rows.find((r) => r.k !== 'st' && r.x.t >= fresh)?.k;
+    $('markets').innerHTML = `<h2>Цены на площадках</h2>
+      <table>
+        <thead><tr><th>Площадка</th><th title="Самое дешёвое предложение">Мин. цена</th><th title="Разница с рыночной ценой">К рынку</th><th>Лотов</th></tr></thead>
+        <tbody>${rows.map(({ k, x }) => {
+          const url = safeUrl(MARKET_LINK[k](item.n, x));
+          const d = meta.p ? pct(x.p, meta.p) : null;
+          const old = x.t < fresh;
+          const title = k === 'mc' || k === 'wp' ? 'Найти скин на площадке' : 'Открыть скин на площадке';
+          const nameHtml = url ? `<a href="${esc(url)}" target="_blank" rel="noopener" title="${title}">${SRC_NAME[k]} ↗</a>` : SRC_NAME[k];
+          return `<tr class="${k === bestK ? 'best' : ''}${old ? ' old' : ''}">
+            <td>${nameHtml}${k === bestK ? ' <span class="tag">дешевле всех</span>' : ''}${k === 'st' ? ' <span class="muted" title="Steam не входит в рыночную цену: там цены выше из-за комиссии, а деньги нельзя вывести">*</span>' : ''}</td>
+            <td><b>${fmtMoney(x.p)}</b>${old ? ` <span class="muted" title="Цена не обновлялась больше 2 часов">· устарела</span>` : ''}</td>
+            <td class="${d != null && d < 0 ? 'up' : 'muted'}">${fmtPct(d)}</td>
+            <td>${k === 'st' ? `<span class="muted" title="Продаж в Steam за 24 часа">${fmtInt(x.v)} прод.</span>` : fmtInt(x.q)}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+  }
+
   function renderHead(meta, item) {
     $('name').textContent = item.n;
     document.title = `${item.n} — CS2 Trade`;
@@ -468,9 +518,13 @@
       (item.spUrl ? `<a href="${esc(item.spUrl)}" target="_blank" rel="noopener">Skinport ↗</a>` : '') +
       `<a href="${steamUrl}" target="_blank" rel="noopener">Steam Market ↗</a>`;
     $('price').textContent = fmtMoney(meta.p);
+    $('price').title = 'Рыночная цена: медиана самых дешёвых предложений на Skinport, market.csgo.com, Waxpeer и Lis-Skins';
     const c = change24(meta);
-    $('change').innerHTML = `<span class="${cls(c)}">${fmtPct(c)}</span> <span class="muted">за 24ч</span>` +
+    $('change').innerHTML =
+      (meta.best ? `<div class="best-line">Дешевле всего: <b>${fmtMoney(meta.best.p)}</b> на ${SRC_NAME[meta.best.m]}</div>` : '') +
+      `<span class="${cls(c)}">${fmtPct(c)}</span> <span class="muted">за 24ч</span>` +
       (meta.c7 != null ? ` · <span class="${cls(meta.c7)}">${fmtPct(meta.c7)}</span> <span class="muted">за 7д</span>` : '');
+    renderMarkets(meta, item);
 
     const s = item.sales || {};
     const block = (title, p) => `<div class="stat"><h3>${title}</h3>
@@ -485,9 +539,10 @@
         <div class="big">${meta.liq == null ? '—' : meta.liq} <span class="muted" style="font-size:12px;font-weight:400">из 100 · ${liqName[liqLevel(meta.liq)]}</span></div>
         <div class="row"><span>Продаж в день</span><span>${perDay(meta) == null ? '—' : perDay(meta).toLocaleString('ru-RU', { maximumFractionDigits: 1 })}</span></div>
         <div class="row"><span>Лотов на Skinport</span><span>${fmtInt(meta.q)}</span></div></div>` +
-      `<div class="stat"><h3>Цена в Steam</h3><div class="big">${fmtMoney(meta.sp)}</div>
-        <div class="row"><span>Разница со Skinport</span><span>${meta.sp && meta.p ? fmtPct(pct(meta.sp, meta.p)) : '—'}</span></div></div>`;
+      `<div class="stat"><h3>Лотов на всех площадках</h3><div class="big">${fmtInt(meta.qa)}</div>
+        <div class="row"><span>Steam, продаж за 24ч</span><span>${fmtInt(item.now?.st?.v)}</span></div></div>`;
   }
+
 
   async function openItem(id) {
     const meta = state.index.find((x) => x.id === id) || state.index[0];

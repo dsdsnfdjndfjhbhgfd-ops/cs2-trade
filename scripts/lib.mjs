@@ -10,8 +10,10 @@ const execFileP = promisify(execFile);
 export const DATA_DIR = process.env.DATA_DIR || 'data';
 export const HOUR = 3600;
 export const DAY = 86400;
-// Сколько дней хранить часовые свечи (дневные хранятся всегда).
+export const MIN15 = 15 * 60;
+// Сколько дней хранить часовые и 15-минутные свечи (дневные хранятся всегда).
 export const HOURLY_RETENTION_DAYS = 45;
+export const MIN15_RETENTION_DAYS = 7;
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -65,16 +67,27 @@ function upsertCandle(list, bucket, price, vol, qty) {
   }
 }
 
-// Добавить наблюдение цены в серию источника { h: [...], d: [...] }.
+// Добавить наблюдение цены в серию источника { m: [...15 мин], h: [...час], d: [...день] }.
 export function addObservation(series, t, price, vol, qty) {
   if (price == null || !(price > 0)) return;
   price = round(price);
+  series.m ||= [];
   series.h ||= [];
   series.d ||= [];
+  upsertCandle(series.m, Math.floor(t / MIN15) * MIN15, price, vol ?? null, qty ?? null);
   upsertCandle(series.h, Math.floor(t / HOUR) * HOUR, price, vol ?? null, qty ?? null);
   upsertCandle(series.d, Math.floor(t / DAY) * DAY, price, vol ?? null, qty ?? null);
-  const minT = t - HOURLY_RETENTION_DAYS * DAY;
-  while (series.h.length && series.h[0][0] < minT) series.h.shift();
+  const minH = t - HOURLY_RETENTION_DAYS * DAY;
+  while (series.h.length && series.h[0][0] < minH) series.h.shift();
+  const minM = t - MIN15_RETENTION_DAYS * DAY;
+  while (series.m.length && series.m[0][0] < minM) series.m.shift();
+}
+
+export function median(values) {
+  const v = values.filter((x) => x != null && x > 0).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const m = v.length >> 1;
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
 }
 
 // Цена закрытия свечи, ближайшей к моменту t (не позже), для расчёта изменения.

@@ -70,7 +70,7 @@ async function main() {
           .map(([ds, price, vol]) => [parseSteamDate(ds), Number(price), Number(vol) || 0])
           .filter(([t, p]) => t && p > 0);
         const { h, d } = buildCandles(points);
-        doc.st = { h: merge(doc.st?.h, h), d: merge(doc.st?.d, d) };
+        doc.st = { ...doc.st, h: merge(doc.st?.h, h), d: merge(doc.st?.d, d) }; // 15-минутные свечи (m) не трогаем
         await writeJson(`items/${id}.json`, doc);
         ok++;
         console.log(`${name}: ${d.length} days`);

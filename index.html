@@ -52,10 +52,14 @@
 
       <div class="chart-area" id="chartArea">
         <div class="toolbar">
-          <div class="seg" id="source" role="group" aria-label="Площадка">
-            <button type="button" data-v="sp">Skinport</button>
-            <button type="button" data-v="st">Steam</button>
-          </div>
+          <select id="source" class="sel" aria-label="Площадка" title="Чья цена на графике">
+            <option value="ag">Рынок · медиана</option>
+            <option value="sp">Skinport</option>
+            <option value="mc">market.csgo.com</option>
+            <option value="wp">Waxpeer</option>
+            <option value="ls">Lis-Skins</option>
+            <option value="st">Steam</option>
+          </select>
           <div class="seg" id="range" role="group" aria-label="Период">
             <button type="button" data-v="1d" title="Последние сутки">1Д</button>
             <button type="button" data-v="1w" title="Последняя неделя">1Н</button>
@@ -64,6 +68,8 @@
             <button type="button" data-v="all" title="Вся история">Всё</button>
           </div>
           <div class="seg" id="tf" role="group" aria-label="Одна свеча">
+            <button type="button" data-v="15m" title="Свеча — 15 минут">15м</button>
+            <button type="button" data-v="30m" title="Свеча — 30 минут">30м</button>
             <button type="button" data-v="1h" title="Свеча — 1 час">1ч</button>
             <button type="button" data-v="4h" title="Свеча — 4 часа">4ч</button>
             <button type="button" data-v="1d" title="Свеча — 1 день">1д</button>
@@ -87,7 +93,11 @@
             <button type="button" data-k="qty"><i style="--c:#f0b90b"></i>Лоты</button>
             <button type="button" data-k="ma7"><i style="--c:#ba68c8"></i>MA 7</button>
             <button type="button" data-k="ma25"><i style="--c:#ff9800"></i>MA 25</button>
-            <button type="button" data-k="cmp"><i style="--c:#66c0f4"></i><span id="cmpLabel">Steam</span></button>
+            <label class="cmp-sel"><i style="--c:#66c0f4"></i>
+              <select id="cmp" aria-label="Сравнить с площадкой">
+                <option value="">Сравнить…</option>
+              </select>
+            </label>
           </div>
           <div class="tools">
             <button type="button" id="fit" title="Показать всю историю (или двойной клик по графику)" aria-label="Показать всю историю">
@@ -110,12 +120,14 @@
         <div class="period" id="period"></div>
       </div>
 
+      <section class="markets" id="markets" aria-label="Цены на площадках"></section>
       <div class="stats" id="stats"></div>
       <p class="note">
-        Свеча — минимальная цена предложения (самый дешёвый лот) за период, столбики — число продаж за последние 24 часа
-        (на недельных свечах — за неделю). MA 7 и MA 25 — средняя цена закрытия за 7 и 25 последних свечей.
+        Свеча — минимальная цена предложения (самый дешёвый лот) за период. «Рынок» — медиана самых дешёвых предложений
+        на Skinport, market.csgo.com, Waxpeer и Lis-Skins (Steam не входит: там цены выше из-за комиссии, а деньги нельзя вывести).
+        Столбики — число продаж на Skinport за последние 24 часа (на недельных свечах — за неделю). MA 7 и MA 25 — средняя цена закрытия за 7 и 25 последних свечей.
         Время — по вашему часовому поясу. Колёсико мыши или щипок — масштаб, перетаскивание — прокрутка, двойной клик — вся история.
-        Данные обновляются примерно раз в 30 минут из открытого API Skinport и Steam Community Market.
+        Данные обновляются примерно каждые 15 минут из открытых API площадок.
       </p>
     </section>
   </main>
