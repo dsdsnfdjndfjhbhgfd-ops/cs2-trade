@@ -107,6 +107,7 @@ async function main() {
       c24: pct(p, closeAt(doc.sp, now - DAY)),
       c7: pct(p, closeAt(doc.sp, now - 7 * DAY)),
       v24: doc.sales?.d1?.volume ?? null,
+      v7: doc.sales?.d7?.volume ?? null,
       v30: doc.sales?.d30?.volume ?? null,
       q: lastSp?.[6] ?? null,
       sp: lastSt && lastSt[0] >= now - 2 * DAY ? lastSt[4] : null,

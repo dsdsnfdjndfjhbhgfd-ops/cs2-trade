@@ -20,13 +20,18 @@
         <input id="search" type="search" placeholder="Поиск скина…" autocomplete="off">
         <select id="sort" aria-label="Сортировка">
           <option value="value">По обороту</option>
-          <option value="volume">По продажам</option>
-          <option value="gain">Рост за 24ч</option>
-          <option value="loss">Падение за 24ч</option>
           <option value="price">По цене</option>
+          <option value="liq">По ликвидности</option>
+          <option value="volume">По продажам</option>
+          <option value="change">По изменению за 24ч</option>
         </select>
+        <button id="dir" class="dir" type="button" aria-label="Направление сортировки"></button>
       </div>
-      <div class="market-head"><span>Скин</span><span>Цена</span><span>24ч</span></div>
+      <div class="market-head">
+        <span>Скин · <button type="button" data-sort="liq" title="Сортировать по ликвидности">ликвидность</button></span>
+        <button type="button" data-sort="price" title="Сортировать по цене">Цена</button>
+        <button type="button" data-sort="change" title="Сортировать по изменению за 24ч">24ч</button>
+      </div>
       <ul id="list" class="market-list"></ul>
     </aside>
 

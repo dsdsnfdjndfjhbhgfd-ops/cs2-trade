@@ -28,23 +28,42 @@ button, input, select { font: inherit; color: inherit; }
 .layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); height: calc(100vh - 52px); }
 
 .market { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
-.market-controls { display: flex; gap: 8px; padding: 12px; }
-.market-controls input { flex: 1; min-width: 0; }
+.market-controls { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; }
+.market-controls input { flex: 1 0 100%; min-width: 0; }
 .market-controls input, .market-controls select {
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; outline: none;
 }
-.market-controls input:focus { border-color: var(--accent); }
+.market-controls select { flex: 1; min-width: 0; }
+.market-controls input:focus, .market-controls select:focus, .dir:focus-visible { border-color: var(--accent); }
+.dir {
+  flex: none; width: 34px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
+  color: var(--accent); cursor: pointer; outline: none; font-weight: 700;
+}
+.dir:hover { border-color: var(--muted); }
 .market-head, .market-list li {
   display: grid; grid-template-columns: 1fr 78px 58px; gap: 8px; align-items: center; padding: 6px 12px;
 }
 .market-head { color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); }
+.market-head button { background: none; border: 0; padding: 0; color: inherit; font-size: inherit; cursor: pointer; }
+.market-head button:hover, .market-head button.on { color: var(--text); }
+.market-head button.on::after { content: attr(data-arrow); color: var(--accent); margin-left: 2px; }
 .market-head span:not(:first-child), .market-list li span:not(:first-child) { text-align: right; }
 .market-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
 .market-list li { cursor: pointer; border-bottom: 1px solid #1a2028; font-variant-numeric: tabular-nums; }
 .market-list li:hover { background: var(--panel-2); }
 .market-list li.sel { background: #222b36; box-shadow: inset 3px 0 0 var(--accent); }
 .market-list .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.market-list .nm small { display: block; color: var(--muted); font-size: 11px; }
+.market-list .nm small { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
+
+/* Индикатор ликвидности: три столбика, как уровень сигнала */
+.liq { display: inline-flex; align-items: flex-end; gap: 1px; height: 9px; flex: none; }
+.liq b { width: 3px; background: #2f3844; border-radius: 1px; }
+.liq b:nth-child(1) { height: 4px; }
+.liq b:nth-child(2) { height: 6px; }
+.liq b:nth-child(3) { height: 9px; }
+.liq.l1 b:nth-child(-n+1) { background: var(--down); }
+.liq.l2 b:nth-child(-n+2) { background: var(--accent); }
+.liq.l3 b { background: var(--up); }
 
 .up { color: var(--up); }
 .down { color: var(--down); }
