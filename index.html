@@ -50,29 +50,71 @@
         </div>
       </div>
 
-      <div class="toolbar">
-        <div class="seg" id="source">
-          <button data-v="sp" class="on">Skinport</button>
-          <button data-v="st">Steam</button>
+      <div class="chart-area" id="chartArea">
+        <div class="toolbar">
+          <div class="seg" id="source" role="group" aria-label="Площадка">
+            <button type="button" data-v="sp">Skinport</button>
+            <button type="button" data-v="st">Steam</button>
+          </div>
+          <div class="seg" id="range" role="group" aria-label="Период">
+            <button type="button" data-v="1d" title="Последние сутки">1Д</button>
+            <button type="button" data-v="1w" title="Последняя неделя">1Н</button>
+            <button type="button" data-v="1m" title="Последний месяц">1М</button>
+            <button type="button" data-v="3m" title="Последние 3 месяца">3М</button>
+            <button type="button" data-v="all" title="Вся история">Всё</button>
+          </div>
+          <div class="seg" id="tf" role="group" aria-label="Одна свеча">
+            <button type="button" data-v="1h" title="Свеча — 1 час">1ч</button>
+            <button type="button" data-v="4h" title="Свеча — 4 часа">4ч</button>
+            <button type="button" data-v="1d" title="Свеча — 1 день">1д</button>
+            <button type="button" data-v="1w" title="Свеча — 1 неделя">1н</button>
+          </div>
+          <div class="seg" id="ctype" role="group" aria-label="Вид графика">
+            <button type="button" data-v="candle" title="Свечи">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1v3M4 11v4M12 3v2M12 12v3" stroke="currentColor" stroke-width="1.4"/><rect x="2" y="4" width="4" height="7" fill="currentColor"/><rect x="10.5" y="5.5" width="3" height="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+            </button>
+            <button type="button" data-v="line" title="Линия">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 12l4-5 3 3 3-6 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            </button>
+            <button type="button" data-v="area" title="Область">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 12l4-5 3 3 3-6 4 4v7H1z" fill="currentColor" opacity=".35"/><path d="M1 12l4-5 3 3 3-6 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
         </div>
-        <div class="seg" id="tf">
-          <button data-v="1h">1ч</button>
-          <button data-v="4h" class="on">4ч</button>
-          <button data-v="1d">1Д</button>
-          <button data-v="1w">1Н</button>
+        <div class="toolbar">
+          <div class="chips" id="layers" role="group" aria-label="Что показывать">
+            <button type="button" data-k="vol"><i style="--c:#26a69a"></i>Продажи</button>
+            <button type="button" data-k="qty"><i style="--c:#f0b90b"></i>Лоты</button>
+            <button type="button" data-k="ma7"><i style="--c:#ba68c8"></i>MA 7</button>
+            <button type="button" data-k="ma25"><i style="--c:#ff9800"></i>MA 25</button>
+            <button type="button" data-k="cmp"><i style="--c:#66c0f4"></i><span id="cmpLabel">Steam</span></button>
+          </div>
+          <div class="tools">
+            <button type="button" id="fit" title="Показать всю историю (или двойной клик по графику)" aria-label="Показать всю историю">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button type="button" id="shot" title="Сохранить картинку графика" aria-label="Сохранить картинку графика">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button type="button" id="full" title="Во весь экран" aria-label="Во весь экран">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
         </div>
-        <label class="toggle"><input type="checkbox" id="showQty"> Лоты на продаже</label>
-      </div>
 
-      <div class="chart-wrap">
-        <div id="chart"></div>
-        <div id="legend" class="legend"></div>
-        <div id="empty" class="empty" hidden></div>
+        <div class="chart-wrap">
+          <div id="chart"></div>
+          <div id="legend" class="legend"></div>
+          <div id="empty" class="empty" hidden></div>
+        </div>
+        <div class="period" id="period"></div>
       </div>
 
       <div class="stats" id="stats"></div>
       <p class="note">
-        Свеча — минимальная цена предложения (самый дешёвый лот) за период, столбики — число продаж за последние 24 часа.
+        Свеча — минимальная цена предложения (самый дешёвый лот) за период, столбики — число продаж за последние 24 часа
+        (на недельных свечах — за неделю). MA 7 и MA 25 — средняя цена закрытия за 7 и 25 последних свечей.
+        Время — по вашему часовому поясу. Колёсико мыши или щипок — масштаб, перетаскивание — прокрутка, двойной клик — вся история.
         Данные обновляются примерно раз в 30 минут из открытого API Skinport и Steam Community Market.
       </p>
     </section>

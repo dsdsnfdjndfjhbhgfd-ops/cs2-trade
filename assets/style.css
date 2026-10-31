@@ -136,21 +136,59 @@ button, input, select { font: inherit; color: inherit; }
 .price { font-size: 26px; font-weight: 700; }
 .change { font-size: 13px; }
 
-.toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.chart-area { display: flex; flex-direction: column; gap: 10px; flex: 1 0 auto; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
 .seg { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-.seg button { background: none; border: 0; padding: 6px 12px; cursor: pointer; color: var(--muted); }
+.seg button { background: none; border: 0; padding: 6px 11px; cursor: pointer; color: var(--muted); display: inline-flex; align-items: center; }
+.seg button:hover { color: var(--text); }
 .seg button.on { background: var(--panel-2); color: var(--accent); }
-.toggle { color: var(--muted); font-size: 13px; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.seg svg { width: 15px; height: 15px; display: block; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button {
+  display: inline-flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 999px; padding: 4px 11px; font-size: 12px; color: var(--muted); cursor: pointer;
+}
+.chips button i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--c); }
+.chips button:hover { color: var(--text); }
+.chips button.on { color: var(--text); border-color: #3a4552; background: var(--panel-2); }
+.chips button.on i { background: var(--c); }
+.chips button:disabled { opacity: .4; cursor: not-allowed; }
+.tools { display: flex; gap: 4px; margin-left: auto; }
+.tools button {
+  width: 32px; height: 30px; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 6px; color: var(--muted); cursor: pointer;
+}
+.tools button:hover, .tools button.on { color: var(--accent); border-color: #3a4552; }
+.tools svg { width: 16px; height: 16px; }
+:is(.seg, .chips, .tools) button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .chart-wrap { position: relative; flex: 1; min-height: 380px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
 #chart { position: absolute; inset: 0; }
 .legend {
-  position: absolute; top: 8px; left: 12px; z-index: 3; font-size: 12px; color: var(--muted);
-  pointer-events: none; font-variant-numeric: tabular-nums;
+  position: absolute; top: 8px; left: 12px; right: 70px; z-index: 3; font-size: 12px; color: var(--muted);
+  pointer-events: none; font-variant-numeric: tabular-nums; line-height: 1.6;
 }
 .legend b { color: var(--text); font-weight: 500; }
+.legend b.up { color: var(--up); }
+.legend b.down { color: var(--down); }
+.legend .lg { white-space: nowrap; }
+.legend .lg i { display: inline-block; width: 8px; height: 2px; vertical-align: middle; margin: 0 4px 0 6px; }
+
+.period {
+  display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12px; color: var(--muted); min-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.period b { color: var(--text); font-weight: 600; }
+.period b.up { color: var(--up); }
+.period b.down { color: var(--down); }
+
+/* Во весь экран */
+.chart-area:fullscreen, .chart-area.pseudo-full { background: var(--bg); padding: 12px 16px; }
+.chart-area.pseudo-full { position: fixed; inset: 0; z-index: 50; }
+.chart-area:fullscreen .chart-wrap, .chart-area.pseudo-full .chart-wrap { flex: 1; height: auto; }
 .empty {
-  position: absolute; inset: 36px 12px auto 12px; z-index: 3; padding: 10px 12px; font-size: 13px;
+  position: absolute; inset: 58px 12px auto 12px; z-index: 3; padding: 10px 12px; font-size: 13px;
   background: rgba(21, 26, 33, .92); border: 1px solid var(--line); border-radius: 6px; color: var(--muted);
 }
 
@@ -167,7 +205,10 @@ button, input, select { font: inherit; color: inherit; }
   .updated { font-size: 11px; }
   .top .updated { display: none; }
   .profile span { max-width: 110px; }
-  .empty { top: 52px; }
+  .empty { top: 76px; }
+  .chart-area { flex: none; }
+  .legend { font-size: 11px; line-height: 1.5; right: 64px; }
+  .tools { margin-left: 0; }
   .market { border-right: 0; border-bottom: 1px solid var(--line); max-height: 45vh; }
   .trade { padding: 12px 16px; overflow: visible; }
   .chart-wrap { flex: none; height: 420px; }

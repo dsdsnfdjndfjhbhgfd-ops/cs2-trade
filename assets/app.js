@@ -5,7 +5,7 @@
   const DAY = 86400;
   const $ = (id) => document.getElementById(id);
 
-  const state = { index: [], item: null, id: null, source: 'sp', tf: '4h', showQty: false };
+  const state = { index: [], item: null, id: null };
 
   const fmtMoney = (v) => (v == null ? '—' : '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   const fmtInt = (v) => (v == null ? '—' : v.toLocaleString('ru-RU'));
@@ -123,27 +123,73 @@
   });
 
   // ---------- График ----------
-  const chart = LightweightCharts.createChart($('chart'), {
+  const LC = LightweightCharts;
+  const COLORS = {
+    up: '#26a69a', down: '#ef5350', qty: '#f0b90b', ma7: '#ba68c8', ma25: '#ff9800', cmp: '#66c0f4',
+    upVol: 'rgba(38,166,154,.45)', downVol: 'rgba(239,83,80,.45)',
+  };
+  const SRC_NAME = { sp: 'Skinport', st: 'Steam' };
+  const other = (src) => (src === 'sp' ? 'st' : 'sp');
+
+  // Настройки графика запоминаются в браузере.
+  const cs = { source: 'sp', tf: '4h', range: 'all', type: 'candle', vol: true, qty: false, ma7: false, ma25: false, cmp: false };
+  const CS_KEY = 'cs2trade.chart';
+  try {
+    const saved = JSON.parse(localStorage.getItem(CS_KEY) || 'null');
+    if (saved && typeof saved === 'object') for (const k of Object.keys(cs)) if (typeof saved[k] === typeof cs[k]) cs[k] = saved[k];
+  } catch { /* хранилище недоступно — настройки по умолчанию */ }
+  const saveCs = () => { try { localStorage.setItem(CS_KEY, JSON.stringify(cs)); } catch { /* не страшно */ } };
+
+  let rangeSetAt = 0; // когда программа последний раз сама меняла видимую область
+  const daily = () => cs.tf === '1d' || cs.tf === '1w';
+  // Часовые свечи показываем по местному времени, дневные и недельные — датой (они отсчитываются по UTC).
+  function fmtTime(t, long) {
+    const d = new Date(t * 1000);
+    if (daily()) {
+      return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: long ? 'numeric' : undefined, timeZone: 'UTC' }) +
+        (long && cs.tf === '1w' ? ' (неделя)' : '');
+    }
+    return d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+  function tickMark(t, type) {
+    const d = new Date(t * 1000);
+    const tz = daily() ? 'UTC' : undefined;
+    if (type === LC.TickMarkType.Year) return String(d.toLocaleDateString('ru-RU', { year: 'numeric', timeZone: tz })).replace(/\s*г\.?$/, '');
+    if (type === LC.TickMarkType.Month) return d.toLocaleDateString('ru-RU', { month: 'short', timeZone: tz }).replace('.', '');
+    if (type === LC.TickMarkType.DayOfMonth) return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: tz }).replace('.', '');
+    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  const chart = LC.createChart($('chart'), {
     autoSize: true,
     layout: { background: { color: '#151a21' }, textColor: '#8a939f', fontSize: 12 },
     grid: { vertLines: { color: '#1e252e' }, horzLines: { color: '#1e252e' } },
     rightPriceScale: { borderColor: '#262e39' },
-    timeScale: { borderColor: '#262e39', timeVisible: true, secondsVisible: false },
-    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-    localization: { locale: 'ru-RU', priceFormatter: (p) => '$' + p.toFixed(2) },
+    timeScale: { borderColor: '#262e39', timeVisible: true, secondsVisible: false, rightOffset: 4, tickMarkFormatter: tickMark },
+    crosshair: { mode: LC.CrosshairMode.Normal },
+    // Под ценами — место для столбиков продаж: отрицательные отметки шкалы там не нужны.
+    localization: { locale: 'ru-RU', priceFormatter: (p) => (p < 0 ? '' : fmtMoney(p)), timeFormatter: (t) => fmtTime(t, true) },
+    watermark: { visible: true, color: 'rgba(138,147,159,.07)', fontSize: 28, horzAlign: 'center', vertAlign: 'center', text: '' },
   });
-  const candles = chart.addCandlestickSeries({
-    upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
-    wickUpColor: '#26a69a', wickDownColor: '#ef5350',
-  });
-  const volume = chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false });
   chart.priceScale('right').applyOptions({ scaleMargins: { top: 0.08, bottom: 0.25 } });
+
+  const noLabels = { lastValueVisible: false, priceLineVisible: false };
+  const main = {
+    candle: chart.addCandlestickSeries({
+      upColor: COLORS.up, downColor: COLORS.down, borderVisible: false, wickUpColor: COLORS.up, wickDownColor: COLORS.down,
+    }),
+    line: chart.addLineSeries({ color: COLORS.up, lineWidth: 2, crosshairMarkerRadius: 4 }),
+    area: chart.addAreaSeries({
+      lineColor: COLORS.up, topColor: 'rgba(38,166,154,.35)', bottomColor: 'rgba(38,166,154,.02)', lineWidth: 2,
+    }),
+  };
+  const volume = chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', ...noLabels });
   chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
-  const qty = chart.addLineSeries({
-    color: '#f0b90b', lineWidth: 1, priceScaleId: 'qty', visible: false,
-    priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false,
-  });
+  const qty = chart.addLineSeries({ color: COLORS.qty, lineWidth: 1, priceScaleId: 'qty', priceFormat: { type: 'volume' }, ...noLabels });
   chart.priceScale('qty').applyOptions({ scaleMargins: { top: 0.1, bottom: 0.3 }, visible: false });
+  const ma7 = chart.addLineSeries({ color: COLORS.ma7, lineWidth: 1, crosshairMarkerVisible: false, ...noLabels });
+  const ma25 = chart.addLineSeries({ color: COLORS.ma25, lineWidth: 1, crosshairMarkerVisible: false, ...noLabels });
+  const cmp = chart.addLineSeries({ color: COLORS.cmp, lineWidth: 2, lineStyle: LC.LineStyle.Dashed, crosshairMarkerRadius: 3 });
 
   // Свечи хранятся как [t, o, h, l, c, объём за 24ч, лоты].
   function aggregate(list, size, sumVolume) {
@@ -166,65 +212,252 @@
   const weekStart = (t) => { const d = Math.floor(t / DAY); return (d - ((d + 3) % 7)) * DAY; }; // понедельник
 
   function seriesFor(item, source, tf) {
-    const s = item[source] || {};
+    const s = item?.[source] || {};
     if (tf === '1h') return s.h || [];
     if (tf === '4h') return aggregate(s.h || [], 4 * HOUR, false);
     if (tf === '1d') return s.d || [];
     return aggregate(s.d || [], 'week', true);
   }
 
-  function drawChart() {
+  // Скользящая средняя цены закрытия за n свечей.
+  function sma(data, n) {
+    const out = [];
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      sum += data[i][4];
+      if (i >= n) sum -= data[i - n][4];
+      if (i >= n - 1) out.push({ time: data[i][0], value: Math.round((sum / n) * 100) / 100 });
+    }
+    return out;
+  }
+
+  // Что сейчас нарисовано: нужно легенде, статистике периода и снимку.
+  const view = { data: [], byTime: new Map(), cmpByTime: new Map(), ma7: new Map(), ma25: new Map() };
+  const toMap = (arr) => new Map(arr.map((p) => [p.time, p.value]));
+
+  function drawChart(keepRange) {
     const item = state.item;
     if (!item) return;
-    const data = seriesFor(item, state.source, state.tf);
-    candles.setData(data.map((c) => ({ time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] })));
-    volume.setData(data.filter((c) => c[5] != null).map((c) => ({
-      time: c[0], value: c[5], color: c[4] >= c[1] ? 'rgba(38,166,154,.45)' : 'rgba(239,83,80,.45)',
-    })));
-    qty.setData(data.filter((c) => c[6] != null).map((c) => ({ time: c[0], value: c[6] })));
-    qty.applyOptions({ visible: state.showQty && state.source === 'sp' });
-    chart.timeScale().fitContent();
+    rangeSetAt = Date.now(); // перерисовка сама двигает шкалу — это не ручная прокрутка
+    const data = seriesFor(item, cs.source, cs.tf);
+    view.data = data;
+    view.byTime = new Map(data.map((c) => [c[0], c]));
+
+    const ohlc = data.map((c) => ({ time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] }));
+    const closes = data.map((c) => ({ time: c[0], value: c[4] }));
+    main.candle.setData(cs.type === 'candle' ? ohlc : []);
+    main.line.setData(cs.type === 'line' ? closes : []);
+    main.area.setData(cs.type === 'area' ? closes : []);
+    // Цвет линии — по изменению за весь показанный период.
+    const rising = data.length < 2 || data[data.length - 1][4] >= data[0][1];
+    const col = rising ? COLORS.up : COLORS.down;
+    main.line.applyOptions({ color: col });
+    main.area.applyOptions({ lineColor: col, topColor: rising ? 'rgba(38,166,154,.35)' : 'rgba(239,83,80,.35)', bottomColor: 'rgba(21,26,33,0)' });
+
+    volume.setData(cs.vol ? data.filter((c) => c[5] != null).map((c) => ({
+      time: c[0], value: c[5], color: c[4] >= c[1] ? COLORS.upVol : COLORS.downVol,
+    })) : []);
+    const showQty = cs.qty && cs.source === 'sp';
+    qty.setData(showQty ? data.filter((c) => c[6] != null).map((c) => ({ time: c[0], value: c[6] })) : []);
+    chart.priceScale('right').applyOptions({ scaleMargins: { top: 0.08, bottom: cs.vol ? 0.25 : 0.06 } });
+
+    const m7 = cs.ma7 ? sma(data, 7) : [];
+    const m25 = cs.ma25 ? sma(data, 25) : [];
+    ma7.setData(m7);
+    ma25.setData(m25);
+    view.ma7 = toMap(m7);
+    view.ma25 = toMap(m25);
+
+    const cmpData = cs.cmp ? seriesFor(item, other(cs.source), cs.tf).map((c) => ({ time: c[0], value: c[4] })) : [];
+    cmp.setData(cmpData);
+    cmp.applyOptions({ title: cs.cmp ? SRC_NAME[other(cs.source)] : '' });
+    view.cmpByTime = toMap(cmpData);
+
+    chart.applyOptions({ watermark: { text: splitName(item.n)[0] } });
+    if (!keepRange) applyRange();
 
     const empty = $('empty');
-    const srcName = state.source === 'sp' ? 'Skinport' : 'Steam';
+    const srcName = SRC_NAME[cs.source];
     if (data.length < 3) {
       empty.hidden = false;
       empty.textContent = data.length === 0
-        ? `По ${srcName} для этого скина данных пока нет.` + (state.source === 'st' ? ' В Steam опрашиваются только самые ходовые позиции.' : '')
-        : `История по ${srcName} только начала собираться: новая свеча появляется с каждым обновлением. Переключите таймфрейм на 1ч, чтобы видеть больше свечей в первые дни.`;
+        ? `По ${srcName} для этого скина данных пока нет.` + (cs.source === 'st' ? ' В Steam опрашиваются только самые ходовые позиции.' : '')
+        : `История по ${srcName} только начала собираться: новая свеча появляется с каждым обновлением. Переключите свечу на 1ч, чтобы видеть больше свечей в первые дни.`;
     } else {
       empty.hidden = true;
     }
-    setLegend(data[data.length - 1]);
+    setLegend(null);
+    updatePeriod();
   }
 
-  function setLegend(c) {
-    if (!c) { $('legend').innerHTML = ''; return; }
-    const ch = pct(c[4], c[1]);
-    $('legend').innerHTML =
-      `O <b>${fmtMoney(c[1])}</b> H <b>${fmtMoney(c[2])}</b> L <b>${fmtMoney(c[3])}</b> C <b class="${cls(ch)}">${fmtMoney(c[4])}</b>` +
-      ` · Продаж за 24ч <b>${fmtInt(c[5])}</b>` + (c[6] != null ? ` · Лотов <b>${fmtInt(c[6])}</b>` : '');
+  // ---------- Период ----------
+  const RANGE_SPAN = { '1d': DAY, '1w': 7 * DAY, '1m': 30 * DAY, '3m': 91 * DAY };
+  // Свеча, которая подходит к периоду: около 20–200 свечей на экране.
+  const RANGE_TF = { '1d': '1h', '1w': '1h', '1m': '4h', '3m': '1d' };
+
+  function applyRange() {
+    rangeSetAt = Date.now();
+    const data = view.data;
+    const span = RANGE_SPAN[cs.range];
+    if (!span || data.length < 2 || data[data.length - 1][0] - data[0][0] <= span) {
+      chart.timeScale().fitContent();
+    } else {
+      const to = data[data.length - 1][0];
+      chart.timeScale().setVisibleRange({ from: to - span, to });
+    }
   }
 
-  chart.subscribeCrosshairMove((p) => {
-    if (!state.item) return;
-    const data = seriesFor(state.item, state.source, state.tf);
-    const c = p.time != null ? data.find((x) => x[0] === p.time) : null;
-    setLegend(c || data[data.length - 1]);
+  // Ручная прокрутка или масштаб снимают выбор периода.
+  chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+    if (Date.now() - rangeSetAt > 400 && cs.range) {
+      cs.range = '';
+      syncControls();
+      saveCs();
+    }
+    updatePeriod();
   });
 
-  function bindSeg(id, key) {
+  function visibleBars() {
+    const r = chart.timeScale().getVisibleLogicalRange();
+    const d = view.data;
+    if (!r || !d.length) return d;
+    return d.slice(Math.max(0, Math.ceil(r.from)), Math.min(d.length, Math.floor(r.to) + 1));
+  }
+
+  function updatePeriod() {
+    const bars = visibleBars();
+    const el = $('period');
+    if (bars.length < 2) { el.innerHTML = ''; return; }
+    const first = bars[0];
+    const last = bars[bars.length - 1];
+    const ch = pct(last[4], first[1]);
+    let hi = bars[0], lo = bars[0];
+    for (const b of bars) { if (b[2] > hi[2]) hi = b; if (b[3] < lo[3]) lo = b; }
+    const vols = bars.map((b) => b[5]).filter((v) => v != null);
+    const avgVol = vols.length ? vols.reduce((a, b) => a + b, 0) / vols.length : null;
+    const volLabel = cs.tf === '1w' ? 'Продаж в неделю, в среднем' : 'Продаж за сутки, в среднем';
+    el.innerHTML =
+      `<span class="muted">${fmtTime(first[0])} — ${fmtTime(last[0])}</span>` +
+      `<span>Изменение <b class="${cls(ch)}">${fmtPct(ch)}</b></span>` +
+      `<span>Макс <b>${fmtMoney(hi[2])}</b> <small class="muted">${fmtTime(hi[0])}</small></span>` +
+      `<span>Мин <b>${fmtMoney(lo[3])}</b> <small class="muted">${fmtTime(lo[0])}</small></span>` +
+      (avgVol != null ? `<span>${volLabel} <b>${fmtInt(Math.round(avgVol))}</b></span>` : '');
+  }
+
+  // ---------- Легенда ----------
+  function setLegend(time) {
+    const d = view.data;
+    const c = (time != null && view.byTime.get(time)) || d[d.length - 1];
+    if (!c) { $('legend').innerHTML = ''; return; }
+    const ch = pct(c[4], c[1]);
+    const val = (label, v, color) => (v == null ? '' : ` <span class="lg"><i style="background:${color}"></i>${label} <b>${fmtMoney(v)}</b></span>`);
+    const otherPrice = view.cmpByTime.get(c[0]);
+    const volLabel = cs.tf === '1w' ? 'Продаж за неделю' : 'Продаж за 24ч';
+    $('legend').innerHTML =
+      `<div><span class="muted">${fmtTime(c[0], true)}</span> ` +
+      (cs.type === 'candle'
+        ? `О <b>${fmtMoney(c[1])}</b> М <b>${fmtMoney(c[2])}</b> Н <b>${fmtMoney(c[3])}</b> З <b class="${cls(ch)}">${fmtMoney(c[4])}</b>`
+        : `Цена <b class="${cls(ch)}">${fmtMoney(c[4])}</b>`) +
+      ` <b class="${cls(ch)}">${fmtPct(ch)}</b></div>` +
+      `<div>${volLabel} <b>${fmtInt(c[5])}</b>` + (c[6] != null && cs.source === 'sp' ? ` · Лотов <b>${fmtInt(c[6])}</b>` : '') +
+      val('MA 7', view.ma7.get(c[0]), COLORS.ma7) + val('MA 25', view.ma25.get(c[0]), COLORS.ma25) +
+      (otherPrice != null
+        ? val(SRC_NAME[other(cs.source)], otherPrice, COLORS.cmp) + ` <span class="muted">(${fmtPct(pct(otherPrice, c[4]))})</span>`
+        : '') +
+      `</div>`;
+  }
+  chart.subscribeCrosshairMove((p) => setLegend(p.time ?? null));
+
+  // ---------- Управление ----------
+  function syncControls() {
+    for (const [id, key] of [['source', 'source'], ['tf', 'tf'], ['range', 'range'], ['ctype', 'type']]) {
+      for (const b of $(id).children) b.classList.toggle('on', b.dataset.v === cs[key]);
+    }
+    for (const b of $('layers').children) {
+      const k = b.dataset.k;
+      b.classList.toggle('on', !!cs[k]);
+      b.setAttribute('aria-pressed', String(!!cs[k]));
+      if (k === 'qty') b.disabled = cs.source !== 'sp';
+    }
+    $('cmpLabel').textContent = SRC_NAME[other(cs.source)];
+    const qb = $('layers').querySelector('[data-k=qty]');
+    qb.title = cs.source === 'sp' ? 'Сколько лотов выставлено на продажу' : 'Число лотов есть только по Skinport';
+  }
+
+  function onSeg(id, fn) {
     $(id).addEventListener('click', (e) => {
-      const b = e.target.closest('button');
+      const b = e.target.closest('button[data-v]');
       if (!b) return;
-      state[key] = b.dataset.v;
-      for (const x of $(id).children) x.classList.toggle('on', x === b);
-      drawChart();
+      fn(b.dataset.v);
+      syncControls();
+      saveCs();
     });
   }
-  bindSeg('source', 'source');
-  bindSeg('tf', 'tf');
-  $('showQty').addEventListener('change', (e) => { state.showQty = e.target.checked; drawChart(); });
+  onSeg('source', (v) => { cs.source = v; drawChart(); });
+  onSeg('tf', (v) => { cs.tf = v; drawChart(); });
+  onSeg('ctype', (v) => { cs.type = v; drawChart(true); });
+  onSeg('range', (v) => {
+    cs.range = v;
+    if (RANGE_TF[v] && RANGE_TF[v] !== cs.tf) { cs.tf = RANGE_TF[v]; drawChart(); } else applyRange();
+  });
+  $('layers').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-k]');
+    if (!b || b.disabled) return;
+    cs[b.dataset.k] = !cs[b.dataset.k];
+    drawChart(true);
+    syncControls();
+    saveCs();
+  });
+
+  const showAll = () => { cs.range = 'all'; applyRange(); syncControls(); saveCs(); };
+  $('fit').addEventListener('click', showAll);
+  $('chart').addEventListener('dblclick', showAll);
+
+  $('full').addEventListener('click', () => {
+    const area = $('chartArea');
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (area.requestFullscreen) area.requestFullscreen().catch(() => area.classList.toggle('pseudo-full'));
+    else area.classList.toggle('pseudo-full'); // iPhone: полноэкранный режим только для видео
+  });
+  document.addEventListener('fullscreenchange', () => {
+    $('full').classList.toggle('on', !!document.fullscreenElement);
+    setTimeout(applyRange, 50); // после смены размера заново показываем выбранный период
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') $('chartArea').classList.remove('pseudo-full');
+  });
+
+  // Снимок: график с подписью (скин, площадка, свеча, дата) — удобно отправить в чат.
+  $('shot').addEventListener('click', () => {
+    if (!state.item) return;
+    const shot = chart.takeScreenshot();
+    const pad = 44;
+    const cv = document.createElement('canvas');
+    cv.width = shot.width;
+    cv.height = shot.height + pad;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#151a21';
+    g.fillRect(0, 0, cv.width, cv.height);
+    g.drawImage(shot, 0, pad);
+    const scale = shot.width / $('chart').clientWidth;
+    const tfName = { '1h': '1 час', '4h': '4 часа', '1d': '1 день', '1w': '1 неделя' }[cs.tf];
+    g.font = `600 ${15 * scale}px Inter, system-ui, sans-serif`;
+    g.fillStyle = '#e6e8ea';
+    g.fillText(state.item.n, 12 * scale, 20 * scale);
+    g.font = `${12 * scale}px Inter, system-ui, sans-serif`;
+    g.fillStyle = '#8a939f';
+    g.fillText(`${SRC_NAME[cs.source]} · свеча ${tfName} · ${new Date().toLocaleString('ru-RU')} · CS2 Trade`, 12 * scale, 36 * scale);
+    cv.toBlob((blob) => {
+      if (!blob) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${state.item.n.replace(/[\\/:*?"<>|★™]+/g, ' ').replace(/\s+/g, ' ').trim()} ${cs.tf}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }, 'image/png');
+  });
+
+  syncControls();
 
   // ---------- Карточка скина ----------
   function renderHead(meta, item) {
