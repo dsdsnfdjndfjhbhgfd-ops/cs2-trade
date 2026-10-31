@@ -1,0 +1,78 @@
+name: Update prices and deploy
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      backfill_steam:
+        description: 'Загрузить прошлую историю из Steam (нужен секрет STEAM_LOGIN_SECURE)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # История хранится в отдельной ветке `data` из одного коммита,
+      # чтобы основная ветка не разрасталась от автоматических коммитов.
+      - name: Load previous data
+        run: |
+          mkdir -p data
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth=1 origin data
+            git archive FETCH_HEAD | tar -x -C data
+          fi
+
+      - name: Backfill Steam history
+        if: ${{ inputs.backfill_steam }}
+        env:
+          STEAM_LOGIN_SECURE: ${{ secrets.STEAM_LOGIN_SECURE }}
+        run: node scripts/backfill-steam.mjs
+
+      - name: Collect prices
+        run: node scripts/collect.mjs
+
+      - name: Save data branch
+        run: |
+          cd data
+          git init -q -b data
+          git add -A
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -qm "data $(date -u +%FT%TZ)"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" data
+
+      - name: Build site
+        run: |
+          mkdir -p _site
+          cp -r index.html assets _site/
+          cp -r data _site/data
+          rm -rf _site/data/.git
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

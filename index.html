@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS2 Trade — графики цен скинов</title>
+  <meta name="description" content="Свечные графики цен и объёмов продаж скинов CS2 по данным Skinport и Steam Market">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='2' y='5' width='3' height='8' fill='%2326a69a'/><rect x='7' y='2' width='3' height='9' fill='%23ef5350'/><rect x='12' y='4' width='3' height='10' fill='%2326a69a'/></svg>">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="top">
+    <a class="logo" href="#">CS2<span>Trade</span></a>
+    <div class="updated" id="updated">Загрузка…</div>
+  </header>
+
+  <main class="layout">
+    <aside class="market">
+      <div class="market-controls">
+        <input id="search" type="search" placeholder="Поиск скина…" autocomplete="off">
+        <select id="sort" aria-label="Сортировка">
+          <option value="value">По обороту</option>
+          <option value="volume">По продажам</option>
+          <option value="gain">Рост за 24ч</option>
+          <option value="loss">Падение за 24ч</option>
+          <option value="price">По цене</option>
+        </select>
+      </div>
+      <div class="market-head"><span>Скин</span><span>Цена</span><span>24ч</span></div>
+      <ul id="list" class="market-list"></ul>
+    </aside>
+
+    <section class="trade">
+      <div class="item-head">
+        <div>
+          <h1 id="name">—</h1>
+          <div class="links" id="links"></div>
+        </div>
+        <div class="price-block">
+          <div class="price" id="price">—</div>
+          <div class="change" id="change"></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="seg" id="source">
+          <button data-v="sp" class="on">Skinport</button>
+          <button data-v="st">Steam</button>
+        </div>
+        <div class="seg" id="tf">
+          <button data-v="1h">1ч</button>
+          <button data-v="4h" class="on">4ч</button>
+          <button data-v="1d">1Д</button>
+          <button data-v="1w">1Н</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="showQty"> Лоты на продаже</label>
+      </div>
+
+      <div class="chart-wrap">
+        <div id="chart"></div>
+        <div id="legend" class="legend"></div>
+        <div id="empty" class="empty" hidden></div>
+      </div>
+
+      <div class="stats" id="stats"></div>
+      <p class="note">
+        Свеча — минимальная цена предложения (самый дешёвый лот) за период, столбики — число продаж за последние 24 часа.
+        Данные обновляются примерно раз в 30 минут из открытого API Skinport и Steam Community Market.
+      </p>
+    </section>
+  </main>
+
+  <script src="assets/vendor/lightweight-charts.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
